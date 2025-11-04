@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/node_modules/
+**/.git/
+**/.github/
+Dockerfile*
+*.user
+*.suo
+*.swp
+*.DS_Store
+
