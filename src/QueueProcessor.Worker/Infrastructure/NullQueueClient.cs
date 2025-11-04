@@ -16,7 +16,13 @@ public sealed class NullQueueClient : IMessageQueueClient
 		_options = options.Value;
 	}
 
-	public async IAsyncEnumerable<QueueMessage> ReadMessagesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    public Task<bool> AcceptMessageAsync(QueueMessage message, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("[NullQueueClient] Accepting message {MessageId}", message.Id);
+        return Task.FromResult(true);
+    }
+
+    public async IAsyncEnumerable<QueueMessage> ReadMessagesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
 	{
 		if (!_options.EmitTestMessages)
 		{
@@ -44,6 +50,12 @@ public sealed class NullQueueClient : IMessageQueueClient
 			await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, _options.EmulatedMessageIntervalSeconds)), cancellationToken);
 		}
 	}
+
+    public Task<bool> SkipMessageAsync(QueueMessage message, CancellationToken cancellationToken)
+    {
+        _logger.LogWarning("[NullQueueClient] Skipping message {MessageId}", message.Id);
+        return Task.FromResult(true);
+    }
 }
 
 

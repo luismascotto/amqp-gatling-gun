@@ -15,7 +15,9 @@ public sealed class MessageProcessor : IMessageProcessor
 	public Task ProcessAsync(QueueMessage message, CancellationToken cancellationToken)
 	{
 		string bodyText = Encoding.UTF8.GetString(message.Body);
-		_logger.LogInformation("Processed message {MessageId} with {HeaderCount} headers. Body: {Body}", message.Id, message.Headers.Count, bodyText);
+		_logger.LogInformation("Processing message {MessageId} with {HeaderCount} headers. Body: {Body}", message.Id, message.Headers.Count, bodyText);
+		Thread.Sleep(TimeSpan.FromSeconds(Random.Shared.Next(2, 10)));
+		_logger.LogInformation("Processed message {MessageId} successfully", message.Id);
 		return Task.CompletedTask;
 	}
 }
