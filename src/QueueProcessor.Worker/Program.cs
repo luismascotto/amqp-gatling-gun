@@ -1,5 +1,4 @@
 using QueueProcessor.Worker;
-using Microsoft.Extensions.Options;
 using QueueProcessor.Worker.Abstractions;
 using QueueProcessor.Worker.Configuration;
 using QueueProcessor.Worker.Infrastructure;
@@ -13,6 +12,12 @@ builder.Services.AddSingleton<IMessageProcessor, MessageProcessor>();
 builder.Services.AddSingleton<IMessageQueueClient, NullQueueClient>();
 
 builder.Services.AddHostedService<Worker>();
+
+//builder.Services.AddLogging(configure => configure.AddSimpleConsole(options =>
+//{
+//    options.IncludeScopes = false;
+//    options.TimestampFormat = "[HH:mm:ss] ";
+//}));
 
 var host = builder.Build();
 host.Run();
