@@ -12,32 +12,32 @@ public class Worker : BackgroundService
     private readonly QueueOptions _options;
     private readonly SemaphoreSlim _semaphore;
 
+    private readonly int _maxDegree;
+
     public Worker(ILogger<Worker> logger, IMessageQueueClient queueClient, IMessageProcessor messageProcessor, IOptions<QueueOptions> options)
     {
         _logger = logger;
         _queueClient = queueClient;
         _messageProcessor = messageProcessor;
         _options = options.Value;
-        int maxDegree = Math.Max(1, _options.MaxConcurrentHandlers);
-        _semaphore = new SemaphoreSlim(maxDegree, maxDegree);
+        _maxDegree = Math.Max(1, _options.MaxConcurrentHandlers);
+        _semaphore = new SemaphoreSlim(_maxDegree, _maxDegree);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Message worker starting with concurrency {Max}", Math.Max(1, _options.MaxConcurrentHandlers));
+        _logger.LogInformation("Message worker starting with concurrency {Max}", _maxDegree);
         await foreach (var message in _queueClient.ReadMessagesAsync(stoppingToken))
         {
             if (_options.OnCapacity == OnCapacityBehavior.Wait)
             {
                 await _semaphore.WaitAsync(stoppingToken);
-                _logger.LogDebug("Processing message {MessageId}.", message.Id);
                 _ = ProcessMessageAsync(message, stoppingToken);
                 continue;
             }
 
             if (_semaphore.Wait(0, CancellationToken.None))
             {
-                _logger.LogDebug("Processing message {MessageId}.", message.Id);
                 _ = ProcessMessageAsync(message, stoppingToken);
                 continue;
             }
@@ -81,6 +81,7 @@ public class Worker : BackgroundService
     {
         try
         {
+            _logger.LogDebug("Processing message {MessageId}.", message.Id);
             await _messageProcessor.ProcessAsync(message, stoppingToken);
             await _queueClient.AcceptMessageAsync(message, stoppingToken);
         }
@@ -91,7 +92,10 @@ public class Worker : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Processing failed for message {MessageId}", message.Id);
-            try { await _queueClient.SkipMessageAsync(message, stoppingToken); }
+            try
+            {
+                await _queueClient.SkipMessageAsync(message, stoppingToken);
+            }
             catch (Exception inner)
             {
                 _logger.LogError(inner, "Failed to skip message {MessageId} after processing error", message.Id);
