@@ -1,3 +1,5 @@
+using QueueProcessor.Worker.Models;
+
 namespace QueueProcessor.Worker.Abstractions;
 
 public interface IMessageProcessor

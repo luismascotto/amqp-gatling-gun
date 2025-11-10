@@ -40,7 +40,7 @@ public sealed class NullQueueClient : IMessageQueueClient
         {
             counter++;
             var messageId = $"{counter:D06}-{Guid.NewGuid():n}";
-            var body = System.Text.Encoding.UTF8.GetBytes($"Synthetic message #{counter} at {DateTimeOffset.UtcNow:O}");
+            var body = System.Text.Encoding.UTF8.GetBytes($"{{ \"Tenant_ID\":{Random.Shared.Next(1, 20)}, \"message\": \"Synthetic message #{counter} at {DateTimeOffset.UtcNow:O}\" }}");
             var headers = new Dictionary<string, string>
             {
                 ["x-provider"] = _options.Provider ?? "null",
@@ -48,7 +48,13 @@ public sealed class NullQueueClient : IMessageQueueClient
             };
             yield return new QueueMessage(messageId, body, headers);
             //await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, _options.EmulatedMessageIntervalSeconds)), cancellationToken);
-            await Task.Delay(TimeSpan.FromMilliseconds(Random.Shared.Next(500, 1500)), cancellationToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(Random.Shared.Next(200, 400)), cancellationToken);
+            }
+            catch
+            {
+            }
         }
     }
 
