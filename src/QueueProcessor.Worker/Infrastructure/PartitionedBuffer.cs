@@ -4,7 +4,7 @@ using QueueProcessor.Worker.Models;
 
 namespace QueueProcessor.Worker.Infrastructure;
 
-public sealed class TenantAwareBuffer
+public class PartitionedBuffer
 {
     private readonly object _sync = new();
     private readonly Dictionary<int, Queue<BufferedQueueMessage>> _tenantQueues = new();
@@ -19,10 +19,10 @@ public sealed class TenantAwareBuffer
     private readonly SemaphoreSlim _spaceReleased = new(0);
     private readonly SemaphoreSlim _eligibilityChanged = new(0);
     private readonly BufferingOptions _options;
-    private readonly ILogger<TenantAwareBuffer> _logger;
+    private readonly ILogger _logger;
 
 
-    public TenantAwareBuffer(IOptions<BufferingOptions> options, ILogger<TenantAwareBuffer> logger)
+    public PartitionedBuffer(IOptions<BufferingOptions> options, ILogger logger)
     {
         _options = options.Value;
         _logger = logger;
@@ -57,7 +57,7 @@ public sealed class TenantAwareBuffer
                         _itemsAvailable.Release();
 
 #if DEBUG
-                        Console.WriteLine($"[TenantAwareBuffer] Enqueued message for tenant {message.TenantId} ({_tenantQueues[message.TenantId].Count}/{_maxPerTenant}) (Total: {_totalCount}/{_maxTotal}");
+                        Console.WriteLine($"[PartitionedBuffer] Enqueued message for tenant {message.TenantId} ({_tenantQueues[message.TenantId].Count}/{_maxPerTenant}) (Total: {_totalCount}/{_maxTotal}");
 #endif
                         return EnqueueStatus.Enqueued;
                     }
@@ -76,8 +76,8 @@ public sealed class TenantAwareBuffer
                     }
                 }
 #if DEBUG
-                Console.WriteLine($"[TenantAwareBuffer] Buffer total: {_totalCount}/{_maxTotal}, Tenants full: {string.Join(", ", _activeTenants.Where(t => _tenantQueues[t].Count >= _maxPerTenant))}, waiting for space...");
-#endif     
+                Console.WriteLine($"[PartitionedBuffer] Buffer total: {_totalCount}/{_maxTotal}, Tenants full: {string.Join(", ", _activeTenants.Where(t => _tenantQueues[t].Count >= _maxPerTenant))}, waiting for space...");
+#endif
             }
 
             await _spaceReleased.WaitAsync(cancellationToken);
@@ -159,5 +159,6 @@ public sealed class TenantAwareBuffer
         }
     }
 }
+
 
 

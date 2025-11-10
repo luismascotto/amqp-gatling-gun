@@ -6,22 +6,22 @@ using QueueProcessor.Worker.Models;
 
 namespace QueueProcessor.Worker.Workers;
 
-public sealed class TenantAwareDispatcher : BackgroundService
+public class PartitionedDispatcher : BackgroundService
 {
-	private readonly ILogger<TenantAwareDispatcher> _logger;
+	private readonly ILogger _logger;
 	private readonly IMessageProcessor _processor;
 	private readonly IMessageQueueClient _queueClient;
-	private readonly TenantAwareBuffer _buffer;
+	private readonly PartitionedBuffer _buffer;
 	private readonly BufferingOptions _options;
 
 	private readonly object _inflightSync = new();
 	private readonly Dictionary<int, int> _inflightPerTenant = new();
 
-	public TenantAwareDispatcher(
-		ILogger<TenantAwareDispatcher> logger,
+	public PartitionedDispatcher(
+		ILogger logger,
 		IMessageProcessor processor,
 		IMessageQueueClient queueClient,
-		TenantAwareBuffer buffer,
+		PartitionedBuffer buffer,
 		IOptions<BufferingOptions> options)
 	{
 		_logger = logger;
@@ -29,18 +29,20 @@ public sealed class TenantAwareDispatcher : BackgroundService
 		_queueClient = queueClient;
 		_buffer = buffer;
 		_options = options.Value;
+		_options.MaxConcurrentHandlers = Math.Max(1, _options.MaxConcurrentHandlers);
+		_options.MaxConcurrentHandlersPerTenant = Math.Max(1, _options.MaxConcurrentHandlersPerTenant);
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		_logger.LogInformation("TenantAwareDispatcher starting with overall={Overall} perTenant={PerTenant}", _options.MaxConcurrentHandlers, _options.MaxConcurrentHandlersPerTenant);
+		_logger.LogInformation("PartitionedDispatcher starting with overall={Overall} perTenant={PerTenant}", _options.MaxConcurrentHandlers, _options.MaxConcurrentHandlersPerTenant);
 		var consumers = new List<Task>(_options.MaxConcurrentHandlers);
 		for (int i = 0; i < _options.MaxConcurrentHandlers; i++)
 		{
 			consumers.Add(ConsumeLoopAsync(stoppingToken));
 		}
 		await Task.WhenAll(consumers);
-		_logger.LogInformation("TenantAwareDispatcher stopped.");
+		_logger.LogInformation("PartitionedDispatcher stopped.");
 	}
 
 	private async Task ConsumeLoopAsync(CancellationToken stoppingToken)
@@ -95,7 +97,7 @@ public sealed class TenantAwareDispatcher : BackgroundService
 		lock (_inflightSync)
 		{
 			_inflightPerTenant.TryGetValue(tenantId, out var current);
-			return current < Math.Max(1, _options.MaxConcurrentHandlersPerTenant);
+			return current < _options.MaxConcurrentHandlersPerTenant;
 		}
 	}
 
@@ -123,5 +125,6 @@ public sealed class TenantAwareDispatcher : BackgroundService
 		}
 	}
 }
+
 
 

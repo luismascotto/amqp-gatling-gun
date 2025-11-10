@@ -12,9 +12,9 @@ builder.Services.Configure<BufferingOptions>(builder.Configuration.GetSection("B
 builder.Services.AddSingleton<IMessageProcessor, MessageProcessor>();
 builder.Services.AddSingleton<IMessageQueueClient, NullQueueClient>();
 
-builder.Services.AddSingleton<TenantAwareBuffer>();
-builder.Services.AddHostedService<TenantBufferPopulator>();
-builder.Services.AddHostedService<TenantAwareDispatcher>();
+builder.Services.AddSingleton<PartitionedBuffer>();
+builder.Services.AddHostedService<BufferPopulator>();
+builder.Services.AddHostedService<PartitionedDispatcher>();
 
 // builder.Services.AddHostedService<Worker>();
 

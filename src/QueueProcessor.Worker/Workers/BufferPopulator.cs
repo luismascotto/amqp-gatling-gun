@@ -6,13 +6,13 @@ using QueueProcessor.Worker.Models;
 
 namespace QueueProcessor.Worker.Workers;
 
-public sealed class TenantBufferPopulator : BackgroundService
+public class BufferPopulator : BackgroundService
 {
-    private readonly ILogger<TenantBufferPopulator> _logger;
+    private readonly ILogger _logger;
     private readonly IMessageQueueClient _queueClient;
-    private readonly TenantAwareBuffer _buffer;
+    private readonly PartitionedBuffer _buffer;
 
-    public TenantBufferPopulator(ILogger<TenantBufferPopulator> logger, IMessageQueueClient queueClient, TenantAwareBuffer buffer)
+    public BufferPopulator(ILogger logger, IMessageQueueClient queueClient, PartitionedBuffer buffer)
     {
         _logger = logger;
         _queueClient = queueClient;
@@ -21,7 +21,7 @@ public sealed class TenantBufferPopulator : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("TenantBufferPopulator starting...");
+        _logger.LogInformation("BufferPopulator starting...");
         await foreach (var msg in _queueClient.ReadMessagesAsync(stoppingToken))
         {
             int tenantId = ExtractTenantId(msg);
@@ -54,7 +54,7 @@ public sealed class TenantBufferPopulator : BackgroundService
                 // Intentionally do not Accept/Skip here; downstream worker will decide
             }
         }
-        _logger.LogInformation("TenantBufferPopulator stopped.");
+        _logger.LogInformation("BufferPopulator stopped.");
     }
 
     private static int ExtractTenantId(QueueMessage message)
@@ -96,5 +96,6 @@ public sealed class TenantBufferPopulator : BackgroundService
         }
     }
 }
+
 
 
