@@ -50,7 +50,7 @@ public sealed class NullQueueClient : IMessageQueueClient
             //await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, _options.EmulatedMessageIntervalSeconds)), cancellationToken);
             try
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(Random.Shared.Next(200, 400)), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(35), cancellationToken);
             }
             catch
             {

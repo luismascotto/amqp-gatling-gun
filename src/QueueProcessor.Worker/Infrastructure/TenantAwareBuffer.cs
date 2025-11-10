@@ -18,18 +18,20 @@ public sealed class TenantAwareBuffer
     private readonly SemaphoreSlim _itemsAvailable = new(0);
     private readonly SemaphoreSlim _spaceReleased = new(0);
     private readonly SemaphoreSlim _eligibilityChanged = new(0);
-
+    private readonly BufferingOptions _options;
     private readonly ILogger<TenantAwareBuffer> _logger;
+
 
     public TenantAwareBuffer(IOptions<BufferingOptions> options, ILogger<TenantAwareBuffer> logger)
     {
+        _options = options.Value;
         _logger = logger;
-        var opts = options.Value;
-        _maxTotal = Math.Max(1, opts.MaxBufferedMessages);
-        _maxPerTenant = Math.Max(1, opts.MaxBufferedMessagesPerTenant);
+
+        _maxTotal = Math.Max(1, _options.MaxBufferedMessages);
+        _maxPerTenant = Math.Max(1, _options.MaxBufferedMessagesPerTenant);
     }
 
-    public async Task EnqueueAsync(BufferedQueueMessage message, CancellationToken cancellationToken)
+    public async Task<EnqueueStatus> EnqueueAsync(BufferedQueueMessage message, CancellationToken cancellationToken)
     {
         while (true)
         {
@@ -37,16 +39,16 @@ public sealed class TenantAwareBuffer
             {
                 if (_totalCount < _maxTotal)
                 {
-                    if (!_tenantQueues.TryGetValue(message.TenantId, out var queue))
+                    if (!_tenantQueues.TryGetValue(message.TenantId, out var tenantQueue))
                     {
-                        queue = new Queue<BufferedQueueMessage>();
-                        _tenantQueues[message.TenantId] = queue;
+                        tenantQueue = new Queue<BufferedQueueMessage>();
+                        _tenantQueues[message.TenantId] = tenantQueue;
                     }
 
-                    if (queue.Count < _maxPerTenant)
+                    if (tenantQueue.Count < _maxPerTenant)
                     {
-                        bool wasEmpty = queue.Count == 0;
-                        queue.Enqueue(message);
+                        bool wasEmpty = tenantQueue.Count == 0;
+                        tenantQueue.Enqueue(message);
                         _totalCount++;
                         if (wasEmpty)
                         {
@@ -54,13 +56,29 @@ public sealed class TenantAwareBuffer
                         }
                         _itemsAvailable.Release();
 
-                        Console.WriteLine($"[TenantAwareBuffer] Enqueued message for tenant {message.TenantId} (total: {_totalCount}/{_maxTotal}, tenant {_tenantQueues[message.TenantId].Count}/{_maxPerTenant})");
+#if DEBUG
+                        Console.WriteLine($"[TenantAwareBuffer] Enqueued message for tenant {message.TenantId} ({_tenantQueues[message.TenantId].Count}/{_maxPerTenant}) (Total: {_totalCount}/{_maxTotal}");
+#endif
+                        return EnqueueStatus.Enqueued;
+                    }
 
-                        return;
+                    switch (_options.OnTenantCapacity)
+                    {
+                        case OnCapacityBehavior.Accept:
+                            return EnqueueStatus.NotEnqueuedAccept;
+
+                        case OnCapacityBehavior.Skip:
+                            return EnqueueStatus.NotEnqueuedSkip;
+
+                        default:
+                            // Fallback to waiting if an unknown enum value is supplied
+                            break;
                     }
                 }
+#if DEBUG
+                Console.WriteLine($"[TenantAwareBuffer] Buffer total: {_totalCount}/{_maxTotal}, Tenants full: {string.Join(", ", _activeTenants.Where(t => _tenantQueues[t].Count >= _maxPerTenant))}, waiting for space...");
+#endif     
             }
-            Console.WriteLine($"[TenantAwareBuffer] Buffer full (total: {_totalCount}/{_maxTotal}, tenant {message.TenantId}: {_tenantQueues[message.TenantId].Count}/{_maxPerTenant}), waiting for space...");
 
             await _spaceReleased.WaitAsync(cancellationToken);
         }
