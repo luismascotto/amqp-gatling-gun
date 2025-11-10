@@ -4,9 +4,9 @@ using QueueProcessor.Worker.Abstractions;
 using QueueProcessor.Worker.Configuration;
 using Microsoft.Extensions.Options;
 
-public class Worker : BackgroundService
+public class Dispatcher : BackgroundService
 {
-    private readonly ILogger<Worker> _logger;
+    private readonly ILogger<Dispatcher> _logger;
     private readonly IMessageQueueClient _queueClient;
     private readonly IMessageProcessor _messageProcessor;
     private readonly QueueOptions _options;
@@ -14,7 +14,7 @@ public class Worker : BackgroundService
 
     private readonly int _maxDegree;
 
-    public Worker(ILogger<Worker> logger, IMessageQueueClient queueClient, IMessageProcessor messageProcessor, IOptions<QueueOptions> options)
+    public Dispatcher(ILogger<Dispatcher> logger, IMessageQueueClient queueClient, IMessageProcessor messageProcessor, IOptions<QueueOptions> options)
     {
         _logger = logger;
         _queueClient = queueClient;
