@@ -57,3 +57,5 @@ nunit-*.xml
 
 .cr
 .vs
+launchSettings.json
+.editorconfig

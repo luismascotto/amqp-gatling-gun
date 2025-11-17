@@ -46,7 +46,7 @@ public sealed class NullQueueClient : IMessageQueueClient
                 ["x-provider"] = _options.Provider ?? "null",
                 ["x-counter"] = counter.ToString()
             };
-            yield return new QueueMessage(messageId, body, headers);
+            yield return new QueueMessage(messageId, messageId, body, headers);
             //await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, _options.EmulatedMessageIntervalSeconds)), cancellationToken);
             try
             {

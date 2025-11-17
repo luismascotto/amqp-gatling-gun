@@ -8,11 +8,11 @@ namespace QueueProcessor.Worker.Workers;
 
 public class BufferPopulator : BackgroundService
 {
-    private readonly ILogger _logger;
+    private readonly ILogger<BufferPopulator> _logger;
     private readonly IMessageQueueClient _queueClient;
     private readonly PartitionedBuffer _buffer;
 
-    public BufferPopulator(ILogger logger, IMessageQueueClient queueClient, PartitionedBuffer buffer)
+    public BufferPopulator(ILogger<BufferPopulator> logger, IMessageQueueClient queueClient, PartitionedBuffer buffer)
     {
         _logger = logger;
         _queueClient = queueClient;

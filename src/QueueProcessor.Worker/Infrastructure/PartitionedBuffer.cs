@@ -19,10 +19,10 @@ public class PartitionedBuffer
     private readonly SemaphoreSlim _spaceReleased = new(0);
     private readonly SemaphoreSlim _eligibilityChanged = new(0);
     private readonly BufferingOptions _options;
-    private readonly ILogger _logger;
+    private readonly ILogger<BufferingOptions> _logger;
 
 
-    public PartitionedBuffer(IOptions<BufferingOptions> options, ILogger logger)
+    public PartitionedBuffer(IOptions<BufferingOptions> options, ILogger<BufferingOptions> logger)
     {
         _options = options.Value;
         _logger = logger;

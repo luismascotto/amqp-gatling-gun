@@ -17,17 +17,20 @@ public sealed class SqsProducerService : BackgroundService
     private readonly AwsOptions _aws;
     private readonly QueueOptions _queue;
     private readonly ProducerOptions _producer;
+    private readonly IAmazonSQS _sqsClient;
 
     public SqsProducerService(
         ILogger<SqsProducerService> logger,
         IOptions<AwsOptions> aws,
         IOptions<QueueOptions> queue,
-        IOptions<ProducerOptions> producer)
+        IOptions<ProducerOptions> producer,
+        IAmazonSQS sqsClient)
     {
         _logger = logger;
         _aws = aws.Value;
         _queue = queue.Value;
         _producer = producer.Value;
+        _sqsClient = sqsClient;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -40,7 +43,7 @@ public sealed class SqsProducerService : BackgroundService
             return;
         }
 
-        using var client = CreateClient();
+        using var client = _sqsClient; //CreateClient();
         var queueUrl = await ResolveQueueUrlAsync(client, stoppingToken);
         if (string.IsNullOrWhiteSpace(queueUrl))
         {

@@ -8,7 +8,7 @@ namespace QueueProcessor.Worker.Workers;
 
 public class PartitionedDispatcher : BackgroundService
 {
-	private readonly ILogger _logger;
+	private readonly ILogger<PartitionedDispatcher> _logger;
 	private readonly IMessageProcessor _processor;
 	private readonly IMessageQueueClient _queueClient;
 	private readonly PartitionedBuffer _buffer;
@@ -18,7 +18,7 @@ public class PartitionedDispatcher : BackgroundService
 	private readonly Dictionary<int, int> _inflightPerTenant = new();
 
 	public PartitionedDispatcher(
-		ILogger logger,
+		ILogger<PartitionedDispatcher> logger,
 		IMessageProcessor processor,
 		IMessageQueueClient queueClient,
 		PartitionedBuffer buffer,
@@ -52,7 +52,10 @@ public class PartitionedDispatcher : BackgroundService
 			try
 			{
 				var message = await _buffer.DequeueNextEligibleAsync(IsTenantEligible, stoppingToken);
-				IncrementInflight(message.TenantId);
+#if DEBUG
+                Console.WriteLine($"[PartitionedDispatcher] Consumer #{Task.CurrentId:-D5} for Tenant {message.TenantId}");
+#endif
+                IncrementInflight(message.TenantId);
 				try
 				{
 					await _processor.ProcessAsync(message.Original, stoppingToken);

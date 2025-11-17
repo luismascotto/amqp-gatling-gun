@@ -1,5 +1,7 @@
-using Microsoft.Extensions.Hosting;
+using Amazon.SQS;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using QueueProcessor.ProducerTest.Configuration;
 using QueueProcessor.ProducerTest.Services;
@@ -12,6 +14,11 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.Configure<AwsOptions>(builder.Configuration.GetSection("Aws"));
 builder.Services.Configure<QueueOptions>(builder.Configuration.GetSection("Queue"));
 builder.Services.Configure<ProducerOptions>(builder.Configuration.GetSection("Producer"));
+
+var user = builder.Configuration.GetSection("Aws").GetValue<string>("AccessKeyId") ?? "";
+var pass = builder.Configuration.GetSection("Aws").GetValue<string>("SecretAccessKey") ?? "";
+
+builder.Services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient(user, pass, Amazon.RegionEndpoint.USEast2));
 
 builder.Services.AddHostedService<SqsProducerService>();
 
