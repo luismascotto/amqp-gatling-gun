@@ -67,7 +67,7 @@ public sealed class AmazonSqsClient : IMessageQueueClient
 
                 var headers = new Dictionary<string, string>();
 
-                if (sqsMessage.MessageAttributes is not null)
+                if (sqsMessage.MessageAttributes.AnySafe())
                 {
                     foreach (KeyValuePair<string, MessageAttributeValue> kvp in sqsMessage.MessageAttributes)
                     {

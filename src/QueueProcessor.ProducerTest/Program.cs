@@ -1,3 +1,4 @@
+using System;
 using Amazon.SQS;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,6 +6,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using QueueProcessor.ProducerTest.Configuration;
 using QueueProcessor.ProducerTest.Services;
+
+TestFuncParamUsage();
 
 // Load .env early so environment variables are available to the Host configuration
 LoadDotEnv();
@@ -30,59 +33,106 @@ await app.RunAsync();
 
 static void LoadDotEnv()
 {
-	try
-	{
-		var path = FindFileUpwards(".env");
-		if (path is null || !File.Exists(path))
-		{
-			return;
-		}
+    try
+    {
+        var path = FindFileUpwards(".env");
+        if (!File.Exists(path))
+        {
+            return;
+        }
 
-		foreach (var rawLine in File.ReadAllLines(path))
-		{
-			var line = rawLine.Trim();
-			if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
-			{
-				continue;
-			}
-			int eq = line.IndexOf('=');
-			if (eq <= 0)
-			{
-				continue;
-			}
-			var key = line.Substring(0, eq).Trim();
-			var value = line.Substring(eq + 1).Trim();
+        foreach (var rawLine in File.ReadAllLines(path))
+        {
+            SetEnvironmentVariableFromLine(rawLine);
+            //var spLine = rawLine.AsSpan().Trim();
 
-			// Strip optional surrounding quotes
-			if ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'")))
-			{
-				value = value.Substring(1, value.Length - 2);
-			}
+            //// At least k=v
+            //int eqIx;
+            //if (spLine.Length < 3 || spLine[0] == '#' || (eqIx = spLine.IndexOf('=')) < 1)
+            //{
+            //    continue;
+            //}
+            //var key = spLine[..eqIx].Trim();
+            //if (key.Length == 0)
+            //{
+            //    continue;
+            //}
+            //var value = spLine[(eqIx + 1)..].Trim("\"'");
 
-			if (!string.IsNullOrEmpty(key))
-			{
-				Environment.SetEnvironmentVariable(key, value);
-			}
-		}
-	}
-	catch
-	{
-		// Best-effort: ignore .env parse errors
-	}
+            ////// Strip optional surrounding quotes
+            ////if ((value.StartsWith("\"") && value.EndsWith("\"")) || (value.StartsWith("'") && value.EndsWith("'")))
+            ////{
+            ////    value = value[1..(value.Length - 2)];
+            ////}
 
-	static string? FindFileUpwards(string fileName)
-	{
-		var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-		while (dir != null)
-		{
-			var candidate = Path.Combine(dir.FullName, fileName);
-			if (File.Exists(candidate))
-			{
-				return candidate;
-			}
-			dir = dir.Parent;
-		}
-		return null;
-	}
+            //Environment.SetEnvironmentVariable(key.ToString(), value.ToString());
+        }
+    }
+    catch
+    {
+        // Best-effort: ignore .env parse errors
+    }
+}
+static string? FindFileUpwards(string fileName)
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (dir != null)
+    {
+        var candidate = Path.Combine(dir.FullName, fileName);
+        if (File.Exists(candidate))
+        {
+            return candidate;
+        }
+        dir = dir.Parent;
+    }
+    return null;
 }
 
+static void SetEnvironmentVariableFromLine(string s)
+{
+    var spLine = s.AsSpan().Trim();
+
+    // At least k=v
+    int eqIx;
+    if (spLine.Length < 3 || spLine[0] == '#' || (eqIx = spLine.IndexOf('=')) < 1)
+    {
+        return;
+    }
+    var key = spLine[..eqIx].Trim();
+    if (key.Length == 0)
+    {
+        return;
+    }
+    var value = spLine[(eqIx + 1)..].Trim("\"'");
+
+    Environment.SetEnvironmentVariable(key.ToString(), value.ToString());
+
+}
+
+static void ParseEnv(string line, Action<(string, string)> KvpEnv)
+{
+    var spLine = line.AsSpan().Trim();
+
+    // At least k=v
+    int eqIx;
+    if (spLine.Length < 3 || spLine[0] == '#' || (eqIx = spLine.IndexOf('=')) < 1)
+    {
+        return;
+    }
+    var key = spLine[..eqIx].Trim();
+    if (key.Length == 0)
+    {
+        return;
+    }
+    var value = spLine[(eqIx + 1)..].Trim("\"'");
+    KvpEnv((key.ToString(), value.ToString()));
+}
+
+static void TestFuncParamUsage()
+{
+    ParseEnv("MY_ENV_VAR=EnvValue", (kvpEnv) =>
+    {
+        Console.WriteLine($"Tuple: {kvpEnv.Item1}, {kvpEnv.Item2}");
+        Environment.SetEnvironmentVariable(kvpEnv.Item1, kvpEnv.Item2);
+    });
+}
