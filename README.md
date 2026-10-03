@@ -3,7 +3,7 @@
 A .NET 9 Worker Service template set up to run as a background service, listen to a queue (provider TBD), and process messages. Ships with a pluggable queue abstraction and a default "null" provider that emits synthetic messages for local testing.
 
 ## Prerequisites
-- .NET SDK 9.x installed
+- .NET SDK 10.x installed
 - Docker (optional, for container builds)
 
 ## Getting Started
@@ -59,4 +59,4 @@ Then, change DI registration in `Program.cs` accordingly.
 - This template favors clarity and pluggability over vendor lock-in.
 - Health endpoints are not exposed by default; add ASP.NET hosting if needed for probes.
 # amqp-gatling-gun
-Plug in to an AMQP queue and process like a Gatling Gun avoiding bootlenecks
+Plug in to an AMQP queue and process like a Gatling Gun avoiding bottlenecks
